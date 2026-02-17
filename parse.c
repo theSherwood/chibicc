@@ -3366,3 +3366,11 @@ Obj *parse(Token *tok) {
   scan_globals();
   return globals;
 }
+
+// Reset parser state so parse() can be called again with a fresh
+// symbol table.  Used by the E2E test harness.
+void reset_parser(void) {
+  memset(scope, 0, sizeof(Scope));
+  globals = NULL;
+  locals  = NULL;
+}
