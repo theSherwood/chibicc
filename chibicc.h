@@ -113,6 +113,7 @@ Token *tokenize_file(char *filename);
 //
 
 char *search_include_paths(char *filename);
+void reset_preprocessor(void);
 void init_macros(void);
 void define_macro(char *name, char *buf);
 void undef_macro(char *name);

@@ -1057,6 +1057,13 @@ static char *format_time(struct tm *tm) {
   return format("\"%02d:%02d:%02d\"", tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
+void reset_preprocessor(void) {
+  memset(&macros, 0, sizeof(macros));
+  memset(&pragma_once, 0, sizeof(pragma_once));
+  cond_incl = NULL;
+  include_next_idx = 0;
+}
+
 void init_macros(void) {
   // Define predefined macros
   define_macro("_LP64", "1");
