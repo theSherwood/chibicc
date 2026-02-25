@@ -788,8 +788,10 @@ static Type *enum_specifier(Token **rest, Token *tok) {
     sc->enum_val = val++;
   }
 
-  if (tag)
+  if (tag) {
+    ty->tag = tag;
     push_tag_scope(tag, ty);
+  }
   return ty;
 }
 
@@ -2645,10 +2647,13 @@ static Type *struct_union_decl(Token **rest, Token *tok) {
     *rest = tok;
 
     Type *ty2 = find_tag(tag);
-    if (ty2)
+    if (ty2) {
+      if (!ty2->tag) ty2->tag = tag;
       return ty2;
+    }
 
     ty->size = -1;
+    ty->tag = tag;
     push_tag_scope(tag, ty);
     return ty;
   }
@@ -2660,6 +2665,8 @@ static Type *struct_union_decl(Token **rest, Token *tok) {
   *rest = attribute_list(tok, ty);
 
   if (tag) {
+    ty->tag = tag;
+
     // If this is a redefinition, overwrite a previous type.
     // Otherwise, register the struct type.
     Type *ty2 = hashmap_get2(&scope->tags, tag->loc, tag->len);

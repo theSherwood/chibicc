@@ -348,6 +348,9 @@ struct Type {
   Node *vla_len; // # of elements
   Obj *vla_size; // sizeof() value
 
+  // Struct/union/enum tag
+  Token *tag;
+
   // Struct
   Member *members;
   bool is_flexible;
