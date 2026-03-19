@@ -3086,6 +3086,44 @@ static Node *primary(Token **rest, Token *tok) {
     return node;
   }
 
+  if (equal(tok, "__builtin_atomic_load")) {
+    Node *node = new_node(ND_ATOMIC_LOAD, tok);
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  if (equal(tok, "__builtin_atomic_store")) {
+    Node *node = new_node(ND_ATOMIC_STORE, tok);
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    tok = skip(tok, ",");
+    node->rhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  if (equal(tok, "__builtin_atomic_fetch_add")) {
+    Node *node = new_node(ND_ATOMIC_FETCH_ADD, tok);
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    tok = skip(tok, ",");
+    node->rhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  if (equal(tok, "__builtin_atomic_fetch_sub")) {
+    Node *node = new_node(ND_ATOMIC_FETCH_SUB, tok);
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    tok = skip(tok, ",");
+    node->rhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
   if (tok->kind == TK_IDENT) {
     // Variable or enum constant
     VarScope *sc = find_var(tok);
