@@ -223,10 +223,6 @@ typedef enum {
   ND_ASM,       // "asm"
   ND_CAS,       // Atomic compare-and-swap
   ND_EXCH,      // Atomic exchange
-  ND_ATOMIC_LOAD,  // Atomic load: __builtin_atomic_load(addr)
-  ND_ATOMIC_STORE, // Atomic store: __builtin_atomic_store(addr, val)
-  ND_ATOMIC_FETCH_ADD, // Atomic fetch-add: __builtin_atomic_fetch_add(obj, val)
-  ND_ATOMIC_FETCH_SUB, // Atomic fetch-sub: __builtin_atomic_fetch_sub(obj, val)
 } NodeKind;
 
 // AST node type

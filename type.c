@@ -303,26 +303,5 @@ void add_type(Node *node) {
       error_tok(node->cas_addr->tok, "pointer expected");
     node->ty = node->lhs->ty->base;
     return;
-  case ND_ATOMIC_LOAD:
-    add_type(node->lhs);
-    if (node->lhs->ty->kind != TY_PTR)
-      error_tok(node->lhs->tok, "pointer expected");
-    node->ty = node->lhs->ty->base;
-    return;
-  case ND_ATOMIC_STORE:
-    add_type(node->lhs);
-    add_type(node->rhs);
-    if (node->lhs->ty->kind != TY_PTR)
-      error_tok(node->lhs->tok, "pointer expected");
-    node->ty = node->lhs->ty->base;
-    return;
-  case ND_ATOMIC_FETCH_ADD:
-  case ND_ATOMIC_FETCH_SUB:
-    add_type(node->lhs);
-    add_type(node->rhs);
-    if (node->lhs->ty->kind != TY_PTR)
-      error_tok(node->lhs->tok, "pointer expected");
-    node->ty = node->lhs->ty->base;
-    return;
   }
 }
