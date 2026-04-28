@@ -3107,7 +3107,7 @@ static Node *primary(Token **rest, Token *tok) {
     }
 
     if (equal(tok->next, "("))
-      error_tok(tok, "implicit declaration of a function");
+      error_tok(tok, "implicit declaration of function '%.*s'", tok->len, tok->loc);
     error_tok(tok, "undefined variable");
   }
 
