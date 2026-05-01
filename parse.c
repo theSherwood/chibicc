@@ -460,7 +460,7 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
     // Handle user-defined types.
     Type *ty2 = find_typedef(tok);
     if (equal(tok, "struct") || equal(tok, "union") || equal(tok, "enum") ||
-        equal(tok, "typeof") || ty2) {
+        equal(tok, "typeof") || equal(tok, "__m128") || ty2) {
       if (counter)
         break;
 
@@ -472,6 +472,9 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
         ty = enum_specifier(&tok, tok->next);
       } else if (equal(tok, "typeof")) {
         ty = typeof_specifier(&tok, tok->next);
+      } else if (equal(tok, "__m128")) {
+        ty = ty_vec128;
+        tok = tok->next;
       } else {
         ty = ty2;
         tok = tok->next;
@@ -1505,7 +1508,7 @@ static bool is_typename(Token *tok) {
       "typedef", "enum", "static", "extern", "_Alignas", "signed", "unsigned",
       "const", "volatile", "auto", "register", "restrict", "__restrict",
       "__restrict__", "_Noreturn", "float", "double", "typeof", "inline",
-      "_Thread_local", "__thread", "_Atomic",
+      "_Thread_local", "__thread", "_Atomic", "__m128",
     };
 
     for (int i = 0; i < sizeof(kw) / sizeof(*kw); i++)
@@ -3062,6 +3065,86 @@ static Node *primary(Token **rest, Token *tok) {
     if (is_flonum(ty))
       return new_num(1, start);
     return new_num(2, start);
+  }
+
+  // SIMD intrinsics — _mm_load_ps / _mm_loadu_ps
+  if (equal(tok, "_mm_load_ps") || equal(tok, "_mm_loadu_ps")) {
+    int aligned = equal(tok, "_mm_load_ps");
+    Node *node = new_node(ND_SIMD_LOAD, tok);
+    node->simd_op = aligned ? SIMD_LOAD_ALIGNED : SIMD_LOAD_UNALIGNED;
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  // _mm_store_ps / _mm_storeu_ps
+  if (equal(tok, "_mm_store_ps") || equal(tok, "_mm_storeu_ps")) {
+    int aligned = equal(tok, "_mm_store_ps");
+    Node *node = new_node(ND_SIMD_STORE, tok);
+    node->simd_op = aligned ? SIMD_STORE_ALIGNED : SIMD_STORE_UNALIGNED;
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);   // pointer
+    tok = skip(tok, ",");
+    node->rhs = assign(&tok, tok);   // __m128 value
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  // _mm_add_ps, _mm_sub_ps, _mm_mul_ps, _mm_div_ps, _mm_min_ps, _mm_max_ps
+  if (equal(tok, "_mm_add_ps") || equal(tok, "_mm_sub_ps") ||
+      equal(tok, "_mm_mul_ps") || equal(tok, "_mm_div_ps") ||
+      equal(tok, "_mm_min_ps") || equal(tok, "_mm_max_ps")) {
+    int op;
+    if (equal(tok, "_mm_add_ps")) op = SIMD_ADD;
+    else if (equal(tok, "_mm_sub_ps")) op = SIMD_SUB;
+    else if (equal(tok, "_mm_mul_ps")) op = SIMD_MUL;
+    else if (equal(tok, "_mm_div_ps")) op = SIMD_DIV;
+    else if (equal(tok, "_mm_min_ps")) op = SIMD_MIN;
+    else op = SIMD_MAX;
+    Node *node = new_node(ND_SIMD_ARITH, tok);
+    node->simd_op = op;
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    tok = skip(tok, ",");
+    node->rhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  // _mm_setzero_ps
+  if (equal(tok, "_mm_setzero_ps")) {
+    Node *node = new_node(ND_SIMD_SET, tok);
+    node->simd_op = SIMD_SET_ZERO;
+    tok = skip(tok->next, "(");
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  // _mm_set1_ps
+  if (equal(tok, "_mm_set1_ps")) {
+    Node *node = new_node(ND_SIMD_SET, tok);
+    node->simd_op = SIMD_SET1;
+    tok = skip(tok->next, "(");
+    node->lhs = assign(&tok, tok);
+    *rest = skip(tok, ")");
+    return node;
+  }
+
+  // _mm_set_ps(e3, e2, e1, e0)
+  if (equal(tok, "_mm_set_ps")) {
+    Node *node = new_node(ND_SIMD_SET, tok);
+    node->simd_op = SIMD_SET4;
+    tok = skip(tok->next, "(");
+    node->simd_args[3] = assign(&tok, tok);   // e3 (highest)
+    tok = skip(tok, ",");
+    node->simd_args[2] = assign(&tok, tok);   // e2
+    tok = skip(tok, ",");
+    node->simd_args[1] = assign(&tok, tok);   // e1
+    tok = skip(tok, ",");
+    node->simd_args[0] = assign(&tok, tok);   // e0 (lowest address)
+    *rest = skip(tok, ")");
+    return node;
   }
 
   if (equal(tok, "__builtin_compare_and_swap")) {

@@ -223,7 +223,28 @@ typedef enum {
   ND_ASM,       // "asm"
   ND_CAS,       // Atomic compare-and-swap
   ND_EXCH,      // Atomic exchange
+  ND_SIMD_LOAD,   // _mm_load_ps / _mm_loadu_ps
+  ND_SIMD_STORE,  // _mm_store_ps / _mm_storeu_ps
+  ND_SIMD_ARITH,  // _mm_add_ps, _mm_sub_ps, _mm_mul_ps, _mm_div_ps, _mm_min_ps, _mm_max_ps
+  ND_SIMD_SET,    // _mm_set_ps, _mm_set1_ps, _mm_setzero_ps
 } NodeKind;
+
+/* SIMD intrinsic sub-variant identifiers (stored in Node.simd_op) */
+enum {
+  SIMD_LOAD_ALIGNED,     // _mm_load_ps
+  SIMD_LOAD_UNALIGNED,   // _mm_loadu_ps
+  SIMD_STORE_ALIGNED,    // _mm_store_ps
+  SIMD_STORE_UNALIGNED,  // _mm_storeu_ps
+  SIMD_ADD,              // _mm_add_ps
+  SIMD_SUB,              // _mm_sub_ps
+  SIMD_MUL,              // _mm_mul_ps
+  SIMD_DIV,              // _mm_div_ps
+  SIMD_MIN,              // _mm_min_ps
+  SIMD_MAX,              // _mm_max_ps
+  SIMD_SET_ZERO,         // _mm_setzero_ps
+  SIMD_SET1,             // _mm_set1_ps
+  SIMD_SET4,             // _mm_set_ps
+};
 
 // AST node type
 struct Node {
@@ -283,6 +304,10 @@ struct Node {
   Obj *atomic_addr;
   Node *atomic_expr;
 
+  // SIMD intrinsics
+  int simd_op;         // sub-variant identifier (SIMD_*)
+  Node *simd_args[4];  // up to 4 arguments (_mm_set_ps)
+
   // Variable
   Obj *var;
 
@@ -310,6 +335,7 @@ typedef enum {
   TY_FLOAT,
   TY_DOUBLE,
   TY_LDOUBLE,
+  TY_VEC128,
   TY_ENUM,
   TY_PTR,
   TY_FUNC,
@@ -395,10 +421,12 @@ extern Type *ty_ulong;
 extern Type *ty_float;
 extern Type *ty_double;
 extern Type *ty_ldouble;
+extern Type *ty_vec128;
 
 bool is_integer(Type *ty);
 bool is_flonum(Type *ty);
 bool is_numeric(Type *ty);
+bool is_vec128(Type *ty);
 bool is_compatible(Type *t1, Type *t2);
 Type *copy_type(Type *ty);
 Type *pointer_to(Type *base);

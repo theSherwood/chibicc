@@ -16,6 +16,7 @@ Type *ty_ulong = &(Type){TY_LONG, 8, 8, true};
 Type *ty_float = &(Type){TY_FLOAT, 4, 4};
 Type *ty_double = &(Type){TY_DOUBLE, 8, 8};
 Type *ty_ldouble = &(Type){TY_LDOUBLE, 16, 16};
+Type *ty_vec128 = &(Type){TY_VEC128, 16, 16};
 
 static Type *new_type(TypeKind kind, int size, int align) {
   Type *ty = calloc(1, sizeof(Type));
@@ -38,6 +39,10 @@ bool is_flonum(Type *ty) {
 
 bool is_numeric(Type *ty) {
   return is_integer(ty) || is_flonum(ty);
+}
+
+bool is_vec128(Type *ty) {
+  return ty->kind == TY_VEC128;
 }
 
 bool is_compatible(Type *t1, Type *t2) {
@@ -174,6 +179,10 @@ static void usual_arith_conv(Node **lhs, Node **rhs) {
 }
 
 void add_type(Node *node) {
+  // IMPORTANT: This early return means that if node->ty is already set,
+  // children (lhs, rhs, etc.) will NOT be recursively typed. Never set
+  // node->ty in the parser for nodes whose children need typing here —
+  // set it in the switch below instead, after children are typed.
   if (!node || node->ty)
     return;
 
@@ -302,6 +311,26 @@ void add_type(Node *node) {
     if (node->lhs->ty->kind != TY_PTR)
       error_tok(node->cas_addr->tok, "pointer expected");
     node->ty = node->lhs->ty->base;
+    return;
+  case ND_SIMD_LOAD:
+    add_type(node->lhs);
+    node->ty = ty_vec128;
+    return;
+  case ND_SIMD_STORE:
+    add_type(node->lhs);
+    add_type(node->rhs);
+    node->ty = ty_void;
+    return;
+  case ND_SIMD_ARITH:
+    add_type(node->lhs);
+    add_type(node->rhs);
+    node->ty = ty_vec128;
+    return;
+  case ND_SIMD_SET:
+    if (node->lhs) add_type(node->lhs);
+    for (int i = 0; i < 4; i++)
+      if (node->simd_args[i]) add_type(node->simd_args[i]);
+    node->ty = ty_vec128;
     return;
   }
 }
